@@ -1,0 +1,146 @@
+# About #
+
+	Name: Syclops SSH Security Appliance 
+	Version: 1.4.2
+	Date: Nov 15, 2014
+	Author(s): Ashwin Shankar, Chandrasekaran S.
+	Company: TBW International Pte. Ltd.
+	License: AGPL v3.0
+
+# Introductions
+
+Syclops is a virtual security appliance to simplify and streamline the management of SSH connections and keys. Syclops helps small teams and consultants manage large numbers of SSH keys and connections easily, avoiding issues related to key sharing and poor firewall security practices. Designed to enforce key security paradigms for cloud based architecture, Syclops makes it easy to secure, and audit the activity occuring on servers over SSH.
+
+# Requirements #
+
+	- OS - Ubuntu 12.04 LTS (64 bit) or 14.04 LTS (64 bit)
+
+	- RAM - 1.5 GB
+	
+	- HDD   
+    	- /syclops - 30GB
+		- /var/lib/docker - 20GB
+
+	- CPU - 2 core
+	- Valid SSL 256-bit Certificate for your FQDN (no wildcard certificates allowed).
+
+# Installation Instructions #
+
+1. Log in as a root user
+
+		sudo su
+
+2. Update your system and install git
+
+		sudo apt-get update && sudo apt-get upgrade -y && sudo apt-get install -y git
+
+2. Add required volumes as per the user requirements, and mount the volumes in specified mount points mentioned above.
+
+3. Navigate to the /opt directory 
+	
+		cd /opt
+
+4. Download the installation script by using following command. 
+
+		git clone https://bitbucket.org/syclops/syclops_main.git syclops
+
+5. Get into the source directory that you have download.
+
+		cd syclops
+
+6. Edit the following file `./build/ui/config/nginx/sites-enabled/syclops.conf` and replace `demo.syclops.io` with your FQDN that you will be going to use to access Syclops. **This is very important, otherwise Syclops will not work.**
+
+		vim ./build/ui/config/nginx/sites-enabled/syclops.conf
+
+7. Install Syclops stack on your system by running the following command:
+
+		./setup
+		
+8. Finally, the script will show you user and password details that are created by scripts. **These details are required to access Syclops. You should save this information safely for future reference to access Syclops.**
+
+9. To configure Syclops to allow terminals to be launched from your Syclops server, you need edit to the terminal configuration to respond as your FQDN. You can do this by editing the file:
+
+		vim  /syclops/terminal/conf.d/10server.conf	
+
+	Open this file and add `your fqdn` in section called origins.
+	
+		"origins": ["localhost", "127.0.0.1","<your-fqdn>"]
+
+## SSL Certification Installation ##
+
+Due to the security policies of certain browsers, WebSocket connections used by Syclops can't be used with self-signed certificates.
+
+Other than some version of Google Chrome, most major browsers require the presence of a valid commercial SSL certificate to establish the WebSockets connections.
+
+We recommend running Syclops with a commercial 256-bit SSL certificate, which can be purchased from any recognized vendor. We advise using single host SSL certificates over wildcard host certificates. 
+
+Once you have purchased your certificates, you need to update Syclops to use these certificates.
+
+_**Make sure the certificate file is a concatenation of both the certificate and the intermediate certificate chain for the provider**_
+
+To install your new commercial certificates:
+
+1. Navigate to the ssl certificate directory
+	
+		cd /syclops/terminal/ssl
+
+2. In this directory, you will find by default self-signed certificate named certificate.pem and key.pem. 
+
+3. Rename your commercial certificate and private key files as `certificate.pem` and `key.pem` respectively, and replace the default files in the directory with your files.
+
+
+## Container Restart ##
+
+You need restart all the containers once to ensure the updated settings are configured correctly.
+
+To restart the containers run the following commands:
+
+	docker stop term ui
+
+	docker start term ui
+
+Now you will be able to access Syclops Web UI by using your `https:<your-fqdn>`
+
+## Update Syclops to use the new FQDN for Terminal Sessions ##
+
+Before you can start using Syclops to connect to remote SSH servers, you need to configure Syclops UI to point to the FQDN of terminal engine to establish SSH connections.
+
+To do that:
+
+1. Go to Syclops system and log in as a "syclops-internal" user. The credentials for the `syclops-internal` user were generated and printed out earlier in the installation process.
+
+2. Select configuration menu on top of the page and select WebSSH Settings from the drop down menu.
+
+3. On that page, update the `Host` field with your `FQDN` for your server.
+
+4. Select save configuration button and log out from Syclops.
+
+5. That's it. Syclops now knows how to initiate SSH sessions from the UI interface.
+
+-------------
+
+# That's it. Syclops is ready to run.
+
+Log in as the `syclops-admin` user to start creating users and projects.
+
+-------------
+
+## Enabling TFA ##
+
+Syclops comes pre-installed with support for two factor authentication for Syclops users. 
+
+TFA privileges need to be enabled by each individual user, and requires having the Google Authenticator client installed on the user's smartphone or computer.
+
+To activate TFA settings for a user, follow these instructions:
+
+	1. Login into your Syclops user account.
+
+	2. Go to user profile page.
+
+	3. Click the TFA settings link on toolbar menu on user profile page. 
+
+	4. Follow the instructions on the page to activate TFA for the users.
+
+	5. Once the steps are followed, you're done and the user's can authenticate using TFA.
+
+------------

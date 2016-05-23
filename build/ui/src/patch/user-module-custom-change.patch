@@ -1,0 +1,14 @@
+diff --git a/modules/user/user.module b/modules/user/user.module
+index 044ad46..127d0a3 100644
+--- a/modules/user/user.module
++++ b/modules/user/user.module
+@@ -3017,6 +3017,9 @@ function user_role_grant_permissions($rid, array $permissions = array()) {
+   $modules = user_permission_get_modules();
+   // Grant new permissions for the role.
+   foreach ($permissions as $name) {
++    if (!isset($modules[$name])) {
++      continue;
++    }
+     db_merge('role_permission')
+       ->key(array(
+         'rid' => $rid,

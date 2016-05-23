@@ -1,0 +1,97 @@
+diff --git a/block.drush.inc b/block.drush.inc
+index 5fab709..b03d734 100644
+--- a/block.drush.inc
++++ b/block.drush.inc
+@@ -36,11 +36,11 @@ function block_drush_command() {
+     'bootstrap' => DRUSH_BOOTSTRAP_DRUPAL_FULL,
+     'drupal dependencies' => array('block',),
+     'options' => array(
+-      '--theme'  => '(optional) Which theme this block is being configured for (defaults to default site theme)',
+-      '--module' => 'Module that defines the block',
+-      '--delta'  => 'Block delta',
+-      '--region' => '(optional) Region where to place block ( defaults to BLOCK_REGION_NONE which means disabled )',
+-      '--weight' => '(optional) Block weight (defaults to 0)',
++      'theme'  => '(optional) Which theme this block is being configured for (defaults to default site theme)',
++      'module' => 'Module that defines the block',
++      'delta'  => 'Block delta',
++      'region' => '(optional) Region where to place block ( defaults to BLOCK_REGION_NONE which means disabled )',
++      'weight' => '(optional) Block weight (defaults to 0)',
+     ),
+   );
+   $items['block-disable'] = array(
+@@ -48,9 +48,9 @@ function block_drush_command() {
+     'bootstrap'   => DRUSH_BOOTSTRAP_DRUPAL_FULL,
+     'drupal dependencies' => array('block', ),
+     'options' => array(
+-      '--theme'  => '(optional) Which theme this block is being configured for (defaults to default site theme)',
+-      '--module' => 'Module that defines the block',
+-      '--delta'  => 'Block delta',
++      'theme'  => '(optional) Which theme this block is being configured for (defaults to default site theme)',
++      'module' => 'Module that defines the block',
++      'delta'  => 'Block delta',
+     ),
+   );
+   $items['block-show'] = array(
+@@ -58,13 +58,13 @@ function block_drush_command() {
+     'bootstrap'   => DRUSH_BOOTSTRAP_DRUPAL_FULL,
+     'drupal dependencies' => array('block', ),
+     'options' => array(
+-      '--theme'  => '(optional) Which theme to select blocks from',
+-      '--module' => 'Only show blocks defined by the specified module',
+-      '--delta'  => 'Only show blocks with the specified delta',
+-      '--region' => 'Only show blocks in a particular region',
+-      '--configured' => 'Only show blocks that have been configured to appear in some region',
+-      '--disabled' => 'Only show blocks that have not been configured to appear in any region',
+-      '--weight' => 'Filter by weight',
++      'theme'  => '(optional) Which theme to select blocks from',
++      'module' => 'Only show blocks defined by the specified module',
++      'delta'  => 'Only show blocks with the specified delta',
++      'region' => 'Only show blocks in a particular region',
++      'configured' => 'Only show blocks that have been configured to appear in some region',
++      'disabled' => 'Only show blocks that have not been configured to appear in any region',
++      'weight' => 'Filter by weight',
+     ),
+   );
+ 
+@@ -103,8 +103,14 @@ function block_drush_help($section) {
+  *
+  */
+ function drush_block_configure_save() {
+-  init_theme();
++  if (drush_drupal_major_version() < 7) {
++    init_theme();
++  }
++  else {
++    drupal_theme_initialize();
++  }
+   global $theme_key;
++  drush_log(dt($theme_key));
+ 
+   $module = drush_get_option('module', NULL);
+   $delta  = drush_get_option('delta', NULL);
+@@ -123,14 +129,22 @@ function drush_block_configure_save() {
+     return drush_set_error("BLOCK_NOT_FOUND", "Specified theme blocks were not found");
+   }
+ 
+-  $form_state['values'][$module .'_'. $delta] = array(
++  $values = array(
+     'region' => $region,
+     'theme'  => $theme,
+     'weight' => $weight,
+   );
+ 
+-  drupal_execute('block_admin_display_form', $form_state, $blocks, $theme);
+-
++  if (drush_drupal_major_version() < 7) {
++    $form_state['values'][$module .'_'. $delta] = $values;
++    drupal_execute('block_admin_display_form', $form_state, $blocks, $theme);
++  }
++  else {
++    $values['module'] = $module;
++    $values['delta'] = $delta;
++    $form_state['values']['blocks'][$module .'_'. $delta] = $values;
++    drupal_form_submit('block_admin_display_form', $form_state, $blocks, $theme);
++  }
+ }
+ 
+ function drush_block_show() {

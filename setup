@@ -1,0 +1,138 @@
+#!/bin/bash
+# File : setup
+# Author : Chandrasekaran "<chandrasekaran@thebw.in>"
+# Description: Installer script to setup Syclops stack.
+#
+
+#
+# User validation
+# 
+if [ "$(id -u)" != "0" ]; then
+   echo "Permission denied. Please try as a sudo user" 1>&2
+   exit 1
+fi
+# Create required directory for backup
+if [[ ! -f /syclops ]];then
+  mkdir -p /syclops/database
+  mkdir -p /syclops/terminal
+  mkdir -p /syclops/ui
+  mkdir -p /syclops/nginx
+  mkdir -p /syclops/playbacks
+else
+ echo "Sorry! Syclops is being installed in this system. Please try on different system."
+ exit 1
+fi
+# Download the source code and patchs
+if [[ ! -f /syclops/ui/sites/default/settings.php ]];then
+  cp ./build/ui/src/syclops/syclops-bitbucket.make /syclops/ui
+  cp ./build/ui/config/nginx/sites-enabled/* /syclops/nginx
+  cp ./script/* /usr/local/bin 
+  apt-get update
+  apt-get install -y curl libcurl3 libcurl3-dev git-core
+  apt-get install -y php5-cli php-pear
+  pear channel-discover pear.drush.org
+  pear install drush/drush
+  cd /syclops/ui/
+  drush make syclops-bitbucket.make  .
+  cd -
+  cp -R ./build/ui/src/drush /syclops/ui/sites/all/
+  cp -R ./build/ui/src/patch/ /tmp
+  cd /syclops/ui
+  patch -p1 < /tmp/patch/user-module-custom-change.patch
+  cd -
+  cd /syclops/ui/sites/all/modules/contrib/og 
+  patch -p1 < /tmp/patch/og-module-custom-change.patch
+  cd -
+  cd /syclops/ui/sites/all/modules/contrib/tfa
+  patch -p1 < /tmp/patch/tfa-skip-permission.patch
+  cd -
+fi
+#
+# Change drupal default session expiry value
+#
+DRUPAL_DEFAULT_SETTING='/syclops/ui/sites/default/default.settings.php'
+DEFAULT_EXPIRY="ini_set\('session.cookie_lifetime', 2000000\);"
+EXPIRY="ini_set\('session.cookie_lifetime', 32400\);"
+if [[ -f $DRUPAL_DEFAULT_SETTING ]];then
+  sed -i -r 's/'"$DEFAULT_EXPIRY"'/'"$EXPIRY"'/g' $(echo $DRUPAL_DEFAULT_SETTING)  
+fi
+#
+# Checks whether Docker already exists or not then installs Docker latest version
+#
+docker_status=$(type -P docker &>/dev/null && echo 1 || echo "")
+if [[ -z $docker_status ]]; then
+    curl -s https://get.docker.io/ubuntu/ | sudo sh
+    echo "$(docker version) installation success."
+fi
+#
+# Checks Docker installation status
+#
+if [[ $? != 0 ]];then
+    echo "Docker installation faild"
+    exit 1
+fi
+# Install nsenter
+ns_util=$(type -P /usr/local/bin/nsenter &>/dev/null && echo 1 || echo "")
+if [[ -z $ns_util ]]; then
+        cd /tmp
+        apt-get update
+        apt-get install -y build-essential
+        curl https://www.kernel.org/pub/linux/utils/util-linux/v2.24/util-linux-2.24.tar.gz | tar -zxf-
+        cd util-linux-2.24
+        ./configure --without-ncurses
+        make nsenter
+        cp nsenter /usr/local/bin
+fi
+#
+# Get all Syclops Image form Docker registry.
+#
+
+# Datbase Image
+docker pull syclops/syclops_db
+# Terminal Image
+docker pull syclops/syclops_trm
+# UI Image
+docker pull syclops/syclops_ui
+# Help: To access a running docker container to use following command
+#
+# C_PID=$(docker inspect --format '{{.State.Pid}}' <your container name> )
+#
+# nsenter --target $C_PID --mount --uts --ipc --net --pid bash
+#
+# Creates database container and syclops user
+#
+DATABASE=$(docker run -i -d --name database -v /syclops/database:/var/lib/mysql -v /share:/share -t syclops/syclops_db)
+#
+# Set timeout for 15 inorder to mysql deamon to start.
+#
+sleep 25
+echo "Syclops Database container started."
+#
+# Creates Syclops user and database
+#
+DATABASE_PID=$(docker inspect --format '{{.State.Pid}}' $DATABASE)
+DATABASE_PASS=$(nsenter --target $DATABASE_PID --mount --uts --ipc --net --pid /syclops_user_create.sh)
+sleep 2
+#
+# Creates Terminal container
+#
+docker run -i -d -p 7443:7443 --name term -v /syclops/terminal:/etc/gateone -v /syclops/playbacks:/var/www/syclops/sites/default/files/playbacks -v /share:/share -t syclops/syclops_trm
+#
+# Set timeout for 10 inorder to install GateOne application.
+#
+sleep 10
+echo "Syclops Terminal container started"
+#
+# Creates UI container
+#
+UI_CONTAINER=$(docker run -i -d -p 80:80 -p 443:443 --volumes-from term -v /syclops/ui/:/var/www/syclops:rw -v /syclops/playbacks:/var/www/syclops/sites/default/files/playbacks -v /syclops/nginx:/etc/nginx/sites-enabled -v /share:/share --name ui --link database:db -t syclops/syclops_ui)
+#
+# Install Syclops UI
+#
+echo "Syclops UI container started"
+#
+UI_PID=$(docker inspect --format '{{.State.Pid}}' $UI_CONTAINER)
+nsenter --target $UI_PID --mount --uts --ipc --net --pid /drush_script.sh $DATABASE_PASS
+#
+
+

@@ -1,0 +1,60 @@
+diff --git a/includes/actions/membership_delete.action.inc b/includes/actions/membership_delete.action.inc
+index 76edd36..71af7e5 100644
+--- a/includes/actions/membership_delete.action.inc
++++ b/includes/actions/membership_delete.action.inc
+@@ -8,7 +8,7 @@
+ function og_membership_delete_action_info() {
+   return array('og_membership_delete_action' => array(
+     'type' => 'og_membership',
+-    'label' => t('Remove from group'),
++    'label' => t('Remove from Project'),
+     'configurable' => FALSE,
+   ));
+ }
+diff --git a/includes/actions/set_state.action.inc b/includes/actions/set_state.action.inc
+index b2bed24..6334664 100644
+--- a/includes/actions/set_state.action.inc
++++ b/includes/actions/set_state.action.inc
+@@ -17,7 +17,7 @@ function og_set_state_action_form($context) {
+   $form['state'] = array(
+     '#type' => 'select',
+     '#title' => t('State'),
+-    '#description' => t('Choose the state to set for the selected users in the group.'),
++    '#description' => t('Choose the state to set for the selected users in the Project.'),
+     '#options' => og_group_content_states(),
+     '#default_value' => OG_STATE_ACTIVE,
+     '#required' => TRUE,
+diff --git a/includes/actions/user_roles.action.inc b/includes/actions/user_roles.action.inc
+index d436d15..88ad821 100644
+--- a/includes/actions/user_roles.action.inc
++++ b/includes/actions/user_roles.action.inc
+@@ -3,7 +3,7 @@
+ function og_user_roles_action_info() {
+   return array('og_user_roles_action' => array(
+     'type' => 'og_membership',
+-    'label' => t('Modify OG user roles'),
++    'label' => t('Modify user roles in Project'),
+     'configurable' => TRUE,
+   ));
+ }
+diff --git a/og_ui/includes/views/handlers/og_ui_handler_area_og_membership_overview.inc b/og_ui/includes/views/handlers/og_ui_handler_area_og_membership_overview.inc
+index ef3b25d..2872910 100644
+--- a/og_ui/includes/views/handlers/og_ui_handler_area_og_membership_overview.inc
++++ b/og_ui/includes/views/handlers/og_ui_handler_area_og_membership_overview.inc
+@@ -84,7 +84,7 @@ class og_ui_handler_area_og_membership_overview extends views_handler_area {
+     if (!empty($group->uid) && $this->options['manager']) {
+       // Group manager.
+       $account = user_load($group->uid);
+-      $items[] = array('data' => t('Group manager: !manager', array('!manager' => theme('username', array('account' => $account)))));
++      $items[] = array('data' => t('Project manager: !manager', array('!manager' => theme('username', array('account' => $account)))));
+     }
+ 
+     $base_query = new EntityFieldQuery();
+@@ -131,6 +131,6 @@ class og_ui_handler_area_og_membership_overview extends views_handler_area {
+       $items[] = array('data' => t('Total content: @count', array('@count' => $count)));
+     }
+ 
+-    return theme('item_list', array('items' => $items, 'title' => t('Group overview')));
++    return theme('item_list', array('items' => $items, 'title' => t('Project overview')));
+   }
+ }

@@ -1,0 +1,3 @@
+# What is Playback Agent? #
+
+ Playback agent is a bash script that task is to create a session playback by using session log which is created by users while they are making the ssh connection. GateOne does not support to create playback from 2 hours ssh session. It is small issue in GateOne. We take that issue and we designed this tools that is lightweight program to create session playback from more than 3 hours user ssh session. In GateOne, It is a best feature that storing each user sessions logs in compressed format. We take advantage that feature and we create session playback from that session logs. It is written by using python. 
